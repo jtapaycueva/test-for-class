@@ -1,0 +1,109 @@
+---
+title: "Midterm_Jack_Tapay-Cueva"
+author: "Jack Tapay-Cueva"
+date: "2024-02-27"
+output: html_document
+---
+
+## Problem 2A
+
+```{r}
+library(tidyverse)
+starwars |>
+  filter(mass < 500) |>
+  drop_na(sex) ->
+  sw
+ggplot(sw, aes(mass, height)) + geom_point() + geom_smooth(se=FALSE)
+```
+
+My interpretation is that as mass increases, height generally increases but begins to plateau around 85 kg.
+
+## Problem 2B
+
+```{r}
+model = lm(height ~ mass, data = sw)
+model
+summary(model)
+```
+The model regression is Y = 101.67 + 0.95X, where X is mass and Y is the predicted height.
+
+Mass is significant as its p-value is significantly less than 0.05, so it passes the threshold.
+
+The usefulness of the model is questionable as the adjusted R-squared is 0.5845. This means that approximately 58.45% of the variance in the dependent variable (height) can be explained by the independent variable (mass)—so it may be worthwhile to consider other models.
+
+## Problem 2B
+
+An approach to this problem would be to plot residuals against fitted values in order to see if the linear model is appropriate.If the relationship is linear, the residuals should be randomly distributed around zero without any clear pattern when plotted against the fitted values. A non-random pattern signals a non-linear relationship.
+
+```{r}
+residuals <- resid(model)
+fitted_values <- fitted(model)
+plot(fitted_values, residuals, 
+     xlab = "Fitted Values", ylab = "Residuals", 
+     main = "Residuals vs Fitted Values")
+abline(h = 0, col = "red")
+```
+The graph above shows that a linear model is not appropriate, because there is a centered around 180 on the fitted values and residuals. The p-value and test statistic of the linear model is 2.72e-12 and 79.77, respectively.
+
+## Problem 2C
+
+```{r}
+sw$mass2 <- sw$mass^2
+model1 = lm(height ~ mass, data = sw)
+model2 = lm(height ~ mass2, data = sw)
+summary(model1)
+summary(model2)
+```
+
+1. The linear model (Model 1) with mass as the predictor is more useful for predicting height. It has a higher Adjusted R-squared value and a lower residual standard error, suggesting more accurate predictions.
+
+2. The justification is in the significant coefficients, the higher Adjusted R-squared value, and the lower residual standard error of Model 1. These factors signal a stronger and more accurate predictive power of the linear relationship between mass and height compared to the quadratic model.
+
+3. It is valid to use the same statistical tests to evaluate both models because these tests assess the models' fit and predictive accuracy. At the same time, when comparing linear and quadratic models, it's important to consider the nature of the relationship they model (linear vs nonlinear) for a more comprehensive understanding.
+
+
+## Problem 2E
+
+```{r}
+set.seed(124)
+library(caret)
+index <- createDataPartition(sw$height, p=0.6, list=FALSE)
+trainData <- sw[index, ]
+testData <- sw[-index, ]
+model_val <- lm(height ~ mass, data=trainData)
+predictions_val <- predict(model_val, newdata=testData)
+mse_val <- mean((predictions_val - testData$height)^2)
+mse_val
+```
+
+```{r}
+set.seed(124)
+train_control_loocv <- trainControl(method="LOOCV")
+model_loocv <- train(height ~ mass, data=sw, method="lm", trControl=train_control_loocv)
+mse_loocv <- min(model_loocv$results$RMSE)^2
+mse_loocv 
+```
+
+```{r}
+set.seed(124)
+train_control_kfold <- trainControl(method="cv", number=11)
+model_kfold <- train(height ~ mass, data=sw, method="lm", trControl=train_control_kfold)
+mse_kfold <- min(model_kfold$results$RMSE)^2
+mse_kfold
+```
+
+The MSE from the different validation methods for predicting height from mass show that the k-fold resulted in the lowest MSE (558.8092), indicating it provided the most accurate predictions among the three methods tested. The LOOCV produced a slightly higher MSE (588.1978), and the validation set approach had the highest MSE (648.0053). This suggests that the k-fold cross-validation method, offered the best estimation.
+
+## Problem 2F
+
+```{r}
+
+set.seed(124)
+sw$sex <- as.factor(sw$sex)
+train_control <- trainControl(method="cv", number=11)
+model <- train(height ~ mass + sex, data=sw, method="lm", trControl=train_control)
+mse3 <- min(model$results$RMSE)^2
+mse3
+```
+
+The fact that this expanded model produced a lower MSE suggests that including sex increases the predictive power of the model.
